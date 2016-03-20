@@ -603,13 +603,9 @@ namespace libtorrent
 			// implements buffer_allocator_interface
 			void free_disk_buffer(char* buf) override;
 			disk_buffer_holder allocate_disk_buffer(char const* category) override;
-			disk_buffer_holder allocate_disk_buffer(bool& exceeded
-				, std::shared_ptr<disk_observer> o
+			disk_buffer_holder allocate_disk_buffer(std::shared_ptr<disk_observer> o
 				, char const* category) override;
 			void reclaim_block(block_cache_reference ref) override;
-
-			bool exceeded_cache_use() const
-			{ return m_disk_thread.exceeded_cache_use(); }
 
 			// implements dht_observer
 			virtual void set_external_address(address const& ip

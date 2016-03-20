@@ -355,3 +355,4 @@ TORRENT_TEST(find_last_clear_misc)
 	test4.clear_bit(89);
 	TEST_EQUAL(test4.find_last_clear(), 91);
 }
+
