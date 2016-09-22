@@ -7,7 +7,7 @@ matrix:
     - env: variant=test_debug lang=cpp98 sim=0 coverage=0
     - env: variant=test_barebones lang=cpp11 sim=0 coverage=0
 
-    - env: variant=test_debug lang=cpp11 sim=1 coverage=0 target=osx-tests
+    - env: variant=test_debug lang=cpp11 sim=0 coverage=0 target=osx-tests
       os: osx
     - env: variant=test_release lang=cpp11 sim=0 coverage=0 docs=1 target=osx-tests
       os: osx
@@ -56,8 +56,7 @@ before_install:
     fi'
 
 # disable simulations on OSX for now. It hangs on travis
-  - if [ $TRAVIS_OS_NAME == "osx" ]; then export toolset="darwin-${lang}"; export sim="0"; fi
-  - if [ $TRAVIS_OS_NAME == "osx" ]; then export ; fi
+  - if [ $TRAVIS_OS_NAME == "osx" ]; then export toolset="darwin-${lang}"; fi
   - if [ $TRAVIS_OS_NAME == "linux" ]; then export toolset="gcc-${lang}"; fi
   - if [[ $TRAVIS_OS_NAME == "linux" && $coverage == "1" ]]; then
     export coverage_toolset=gcc-coverage;
@@ -70,7 +69,7 @@ before_install:
 install:
   - 'if [[ $toolset == "gcc" ]]; then g++-5 --version; fi'
   - 'echo "using gcc : cpp11 : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 ;" > ~/user-config.jam'
-  - 'echo "using gcc : ubsan : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 <compileflags>-fsanitize=undefined <linkflags>-fsanitize=undefined ;" >> ~/user-config.jam'
+  - 'echo "using gcc : ubsan : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 <compileflags>-fsanitize=undefined <compileflags>-fno-sanitize-recover=undefined <linkflags>-fsanitize=undefined ;" >> ~/user-config.jam'
   - 'echo "using gcc : coverage : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 <compileflags>--coverage <linkflags>--coverage ;" >> ~/user-config.jam'
   - 'echo "using gcc : cpp98 : ccache g++-5 : <cflags>-std=c99 <cxxflags>-std=c++98 ;" >> ~/user-config.jam'
 
