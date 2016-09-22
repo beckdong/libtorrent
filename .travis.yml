@@ -68,7 +68,7 @@ before_install:
   - 'echo "using toolset: " ${toolset}'
 
 install:
-  - g++-5 --version
+  - 'if [[ $toolset == "gcc" ]]; then g++-5 --version; fi'
   - 'echo "using gcc : cpp11 : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 ;" > ~/user-config.jam'
   - 'echo "using gcc : ubsan : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 <compileflags>-fsanitize=undefined <linkflags>-fsanitize=undefined ;" >> ~/user-config.jam'
   - 'echo "using gcc : coverage : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 <compileflags>--coverage <linkflags>--coverage ;" >> ~/user-config.jam'
