@@ -95,14 +95,10 @@ namespace libtorrent
 
 	namespace {
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-#endif
+#if DEBUG_DISK_THREAD
 
 	void debug_log(char const* fmt, ...)
 	{
-#if DEBUG_DISK_THREAD
 		static mutex log_mutex;
 		static const time_point start = clock_type::now();
 		va_list v;
@@ -126,10 +122,9 @@ namespace libtorrent
 		prepend_time = (usr[len-1] == '\n');
 		mutex::scoped_lock l(log_mutex);
 		fputs(buf, stderr);
-#else
-	TORRENT_UNUSED(fmt);
-#endif
 	}
+
+#endif // DEBUG_DISK_THREAD
 
 	int file_flags_for_job(disk_io_job* j
 		, bool const coalesce_buffers)
@@ -139,10 +134,6 @@ namespace libtorrent
 		if (coalesce_buffers) ret |= file::coalesce_buffers;
 		return ret;
 	}
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 	} // anonymous namespace
 
