@@ -8,10 +8,13 @@ matrix:
     - env: variant=test_barebones lang=cpp11 sim=0 coverage=0
 
     - env: variant=test_debug lang=cpp11 sim=0 coverage=0 target=osx-tests
+      osx_image: xcode6.4
       os: osx
     - env: variant=test_release lang=cpp11 sim=0 coverage=0 docs=1 target=osx-tests
+      osx_image: xcode6.4
       os: osx
     - env: variant=test_debug lang=cpp98 sim=0 coverage=0 target=osx-tests
+      osx_image: xcode6.4
       os: osx
 
 git:
@@ -69,7 +72,7 @@ before_install:
 install:
   - 'if [[ $toolset == "gcc" ]]; then g++-5 --version; fi'
   - 'echo "using gcc : cpp11 : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 ;" > ~/user-config.jam'
-  - 'echo "using gcc : ubsan : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 <compileflags>-fsanitize=undefined <compileflags>-fno-sanitize-recover=undefined <linkflags>-fsanitize=undefined <linkflags>-fno-sanitize-recover=undefined;" >> ~/user-config.jam'
+  - 'echo "using gcc : ubsan : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 <compileflags>-fsanitize=undefined <compileflags>-fno-sanitize-recover=undefined <linkflags>-fsanitize=undefined <linkflags>-fno-sanitize-recover=undefined ;" >> ~/user-config.jam'
   - 'echo "using gcc : coverage : ccache g++-5 : <cflags>-std=c11 <cxxflags>-std=c++11 <compileflags>--coverage <linkflags>--coverage ;" >> ~/user-config.jam'
   - 'echo "using gcc : cpp98 : ccache g++-5 : <cflags>-std=c99 <cxxflags>-std=c++98 ;" >> ~/user-config.jam'
 
