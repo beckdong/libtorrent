@@ -76,7 +76,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #if DEBUG_DISK_THREAD
 #define DLOG debug_log
 #else
-#define DLOG TORRENT_WHILE_0 debug_log
+void dummy(char const* fmt, ...);
+#define DLOG TORRENT_WHILE_0 dummy
 #endif
 
 #endif // cplusplus
