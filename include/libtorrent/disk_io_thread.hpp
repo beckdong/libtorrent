@@ -384,7 +384,7 @@ namespace libtorrent
 #endif
 
 		void maybe_issue_queued_read_jobs(cached_piece_entry* pe,
-			jobqueue_t& completed_jobs);
+			jobqueue_t& completed_jobs, bool clear_outstanding = true);
 		int do_read(disk_io_job* j, jobqueue_t& completed_jobs);
 		int do_uncached_read(disk_io_job* j);
 

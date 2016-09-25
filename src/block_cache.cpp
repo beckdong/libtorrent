@@ -242,20 +242,23 @@ static_assert(sizeof(job_action_name)/sizeof(job_action_name[0])
 		return piece_log_t::job_names[j - piece_log_t::flushing];
 	}
 
+namespace {
+
 	void print_piece_log(std::vector<piece_log_t> const& piece_log)
 	{
 		for (int i = 0; i < int(piece_log.size()); ++i)
 		{
 			if (piece_log[i].block == -1)
 			{
-				std::printf("%d: %s\n", i, job_name(piece_log[i].job));
+				assert_print("%d: %s\n", i, job_name(piece_log[i].job));
 			}
 			else
 			{
-				std::printf("%d: %s %d\n", i, job_name(piece_log[i].job), piece_log[i].block);
+				assert_print("%d: %s %d\n", i, job_name(piece_log[i].job), piece_log[i].block);
 			}
 		}
 	}
+}
 
 	void assert_print_piece(cached_piece_entry const* pe)
 	{
@@ -285,11 +288,7 @@ static_assert(sizeof(job_action_name)/sizeof(job_action_name[0])
 				, int(pe->num_blocks), int(pe->blocks_in_piece), int(pe->hashing_done)
 				, int(pe->marked_for_deletion), int(pe->need_readback), pe->hash_passes
 				, int(pe->read_jobs.size()), int(pe->jobs.size()));
-			for (int i = 0; i < pe->piece_log.size(); ++i)
-			{
-				assert_print("%s %s (%d)", (i==0?"":",")
-					, job_name(pe->piece_log[i].job), pe->piece_log[i].block);
-			}
+			print_piece_log(pe->piece_log);
 		}
 		assert_print("\n");
 	}

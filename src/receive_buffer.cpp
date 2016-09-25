@@ -93,6 +93,12 @@ int receive_buffer::advance_pos(int const bytes)
 	return sub_transferred;
 }
 
+void receive_buffer::put_back(int bytes)
+{
+	TORRENT_ASSERT(m_recv_pos >= bytes);
+	m_recv_pos -= bytes;
+}
+
 // size = the packet size to remove from the receive buffer
 // packet_size = the next packet size to receive in the buffer
 // offset = the offset into the receive buffer where to remove `size` bytes

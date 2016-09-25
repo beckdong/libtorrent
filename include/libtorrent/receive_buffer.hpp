@@ -48,7 +48,7 @@ struct TORRENT_EXTRA_EXPORT receive_buffer
 	int packet_size() const { return m_packet_size; }
 	int packet_bytes_remaining() const
 	{
-		TORRENT_ASSERT(m_recv_start == 0);
+//		TORRENT_ASSERT(m_recv_start == 0);
 		TORRENT_ASSERT(m_packet_size > 0);
 		return m_packet_size - m_recv_pos;
 	}
@@ -75,6 +75,8 @@ struct TORRENT_EXTRA_EXPORT receive_buffer
 	// tell the buffer we consumed some bytes of it. This will advance the read
 	// cursor
 	int advance_pos(int bytes);
+
+	void put_back(int bytes);
 
 	// has the read cursor reached the end cursor?
 	bool pos_at_end() { return m_recv_pos == m_recv_end; }

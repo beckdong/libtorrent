@@ -1111,7 +1111,7 @@ namespace libtorrent
 	// ----------- PIECE -----------
 	// -----------------------------
 
-	void bt_peer_connection::on_piece(int received)
+	void bt_peer_connection::on_piece(int const received)
 	{
 		INVARIANT_CHECK;
 
@@ -1227,7 +1227,9 @@ namespace libtorrent
 //				, p.piece, p.start, p.length);
 #endif
 
-		if (recv_pos - received < header_size && recv_pos >= header_size)
+		if (recv_pos - received < header_size
+			&& recv_pos >= header_size
+			&& received > 0)
 		{
 			// call this once, the first time the entire header
 			// has been received
@@ -2579,8 +2581,7 @@ namespace libtorrent
 			int pos = m_recv_buffer.pos();
 			int limit = m_recv_buffer.packet_size() > pos
 				? m_recv_buffer.packet_size() - pos : m_recv_buffer.packet_size();
-			while (bytes_transferred > 0 &&
-				((sub_transferred = (std::min)(int(bytes_transferred), limit)) > 0))
+			do
 			{
 	#if TORRENT_USE_ASSERTS
 				std::int64_t const cur_payload_dl = m_statistics.last_payload_downloaded();
@@ -2599,7 +2600,7 @@ namespace libtorrent
 
 				m_recv_buffer.advance_pos(sub_transferred);
 				bytes_transferred -= sub_transferred;
-				TORRENT_ASSERT(sub_transferred > 0);
+				TORRENT_ASSERT(sub_transferred >= 0);
 
 	#if TORRENT_USE_ASSERTS
 				TORRENT_ASSERT(m_statistics.last_payload_downloaded() - cur_payload_dl >= 0);
@@ -2614,7 +2615,8 @@ namespace libtorrent
 				pos = m_recv_buffer.pos();
 				limit = m_recv_buffer.packet_size() > pos
 					? m_recv_buffer.packet_size() - pos : m_recv_buffer.packet_size();
-			}
+			} while (bytes_transferred > 0 &&
+				((sub_transferred = (std::min)(int(bytes_transferred), limit)) > 0));
 		}
 		else
 #endif
@@ -3494,7 +3496,9 @@ namespace libtorrent
 			// byte here, instead it's counted in the message
 			// handler itself, for the specific message
 			TORRENT_ASSERT(bytes_transferred <= 5);
-			int used_bytes = int(recv_buffer.size()) > 4 ? int(bytes_transferred) - 1: int(bytes_transferred);
+			int const used_bytes = int(recv_buffer.size()) > 4
+				? (std::max)(0, int(bytes_transferred) - 1)
+				: int(bytes_transferred);
 			received_bytes(0, used_bytes);
 			bytes_transferred -= used_bytes;
 			if (int(recv_buffer.size()) < 4) return;
@@ -3530,7 +3534,7 @@ namespace libtorrent
 			m_recv_buffer.cut(4, packet_size);
 			recv_buffer = m_recv_buffer.get();
 			TORRENT_ASSERT(int(recv_buffer.size()) == 1);
-			TORRENT_ASSERT(bytes_transferred == 1);
+//			TORRENT_ASSERT(bytes_transferred == 1);
 		}
 
 		if (m_state == state_t::read_packet)
@@ -3547,7 +3551,20 @@ namespace libtorrent
 			std::int64_t const cur_payload_dl = statistics().last_payload_downloaded();
 			std::int64_t const cur_protocol_dl = statistics().last_protocol_downloaded();
 #endif
-			if (dispatch_message(int(bytes_transferred)))
+
+			bool const ret = dispatch_message(int(bytes_transferred));
+
+			if (m_channel_state[download_channel] & peer_info::bw_disk)
+			{
+				// this means we're blocked by the disk. We have a piece in our
+				// receive buffer, but we weren't able to allocate a disk buffer
+				// to copy it into
+				// we cannot reset the receive buffer now, we have to wait until
+				// the disk thread tells us there's more space
+				return;
+			}
+
+			if (ret)
 			{
 				if (m_channel_state[download_channel] & peer_info::bw_disk)
 				{

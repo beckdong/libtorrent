@@ -97,7 +97,6 @@ namespace libtorrent
 
 	char const* job_name(int j);
 
-	void print_piece_log(std::vector<piece_log_t> const& piece_log);
 	void assert_print_piece(cached_piece_entry const* pe);
 
 #endif

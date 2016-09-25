@@ -435,7 +435,7 @@ namespace libtorrent
 	void disk_buffer_pool::release_memory()
 	{
 		TORRENT_ASSERT(m_magic == 0x1337);
-		TORRENT_ASSERT(m_highest_allocated < m_max_size);
+		TORRENT_ASSERT(m_highest_allocated <= m_max_size);
 
 		if (m_cache_pool == nullptr) return;
 
@@ -450,7 +450,7 @@ namespace libtorrent
 
 		m_highest_allocated = m_free_blocks.find_last_clear();
 
-		TORRENT_ASSERT(m_highest_allocated < m_max_size);
+		TORRENT_ASSERT(m_highest_allocated <= m_max_size);
 	}
 
 }

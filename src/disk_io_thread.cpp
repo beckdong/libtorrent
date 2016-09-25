@@ -1110,9 +1110,20 @@ namespace libtorrent
 
 		if (ret == need_disk_buffer)
 		{
-			std::unique_lock<std::mutex> l2(m_job_mutex);
 			// this job failed because we're out of memory. We hang it on this
 			// queue to be re-run once at least one disk cache block frees up.
+#if TORRENT_USE_ASSERTS
+			{
+				std::unique_lock<std::mutex> l(m_cache_mutex);
+				if (j->action == disk_io_job::read)
+				{
+					cached_piece_entry* pe = m_disk_cache.find_piece(j);
+					TORRENT_ASSERT(pe != nullptr);
+					TORRENT_PIECE_ASSERT(pe->outstanding_read == 1, pe);
+				}
+			}
+#endif
+			std::unique_lock<std::mutex> l2(m_job_mutex);
 			m_waiting_for_buffer.push_back(j);
 		}
 
@@ -1221,7 +1232,29 @@ namespace libtorrent
 		if (pe == nullptr)
 		{
 			l.unlock();
-			return do_uncached_read(j);
+			int const ret = do_uncached_read(j);
+
+			if (ret == need_disk_buffer)
+			{
+				l.lock();
+				cached_piece_entry* pe = m_disk_cache.find_piece(j);
+				if (pe == nullptr)
+				{
+					pe = m_disk_cache.allocate_piece(j, cached_piece_entry::read_lru1);
+					if (pe == nullptr)
+					{
+						j->ret = -1;
+						j->error.ec = error::no_memory;
+						j->error.operation = storage_error::read;
+						return -1;
+					}
+				}
+#if TORRENT_USE_ASSERTS
+				pe->piece_log.push_back(piece_log_t(piece_log_t::set_outstanding_jobs, __LINE__));
+#endif
+				pe->outstanding_read = 1;
+			}
+			return ret;
 		}
 		TORRENT_PIECE_ASSERT(pe->outstanding_read == 1, pe);
 
@@ -1236,7 +1269,9 @@ namespace libtorrent
 
 			std::unique_lock<std::mutex> l2(m_cache_mutex);
 			pe = m_disk_cache.find_piece(j);
-			if (pe) maybe_issue_queued_read_jobs(pe, completed_jobs);
+			TORRENT_ASSERT(pe != nullptr);
+			maybe_issue_queued_read_jobs(pe, completed_jobs, false);
+			TORRENT_PIECE_ASSERT(pe->outstanding_read == 1, pe);
 			return ret;
 		}
 
@@ -1288,15 +1323,21 @@ namespace libtorrent
 				return ret;
 			}
 			TORRENT_PIECE_ASSERT(pe->outstanding_read == 1, pe);
-
-			if (pe->read_jobs.size() > 0)
-				fail_jobs_impl(j->error, pe->read_jobs, completed_jobs);
-			TORRENT_PIECE_ASSERT(pe->read_jobs.size() == 0, pe);
-			pe->outstanding_read = 0;
+			if (ret != need_disk_buffer)
+			{
+				if (pe->read_jobs.size() > 0)
+					fail_jobs_impl(j->error, pe->read_jobs, completed_jobs);
+				TORRENT_PIECE_ASSERT(pe->read_jobs.size() == 0, pe);
+				pe->outstanding_read = 0;
 #if TORRENT_USE_ASSERTS
-			pe->piece_log.push_back(piece_log_t(piece_log_t::clear_outstanding_jobs));
+				pe->piece_log.push_back(piece_log_t(piece_log_t::clear_outstanding_jobs, __LINE__));
 #endif
-			m_disk_cache.maybe_free_piece(pe);
+				m_disk_cache.maybe_free_piece(pe);
+			}
+			else
+			{
+				TORRENT_PIECE_ASSERT(pe->outstanding_read == 1, pe);
+			}
 			return ret;
 		}
 
@@ -1327,7 +1368,7 @@ namespace libtorrent
 	}
 
 	void disk_io_thread::maybe_issue_queued_read_jobs(cached_piece_entry* pe
-		, jobqueue_t& completed_jobs)
+		, jobqueue_t& completed_jobs, bool const clear_outstanding)
 	{
 		TORRENT_PIECE_ASSERT(pe->outstanding_read == 1, pe);
 
@@ -1337,11 +1378,14 @@ namespace libtorrent
 			fail_jobs_impl(storage_error(boost::asio::error::operation_aborted)
 				, pe->read_jobs, completed_jobs);
 			TORRENT_PIECE_ASSERT(pe->read_jobs.size() == 0, pe);
-			pe->outstanding_read = 0;
+			if (clear_outstanding)
+			{
+				pe->outstanding_read = 0;
 #if TORRENT_USE_ASSERTS
-			pe->piece_log.push_back(piece_log_t(piece_log_t::clear_outstanding_jobs));
+				pe->piece_log.push_back(piece_log_t(piece_log_t::clear_outstanding_jobs, __LINE__));
 #endif
-			m_disk_cache.maybe_free_piece(pe);
+				m_disk_cache.maybe_free_piece(pe);
+			}
 			return;
 		}
 
@@ -1395,16 +1439,20 @@ namespace libtorrent
 
 		if (next_job)
 		{
+			TORRENT_PIECE_ASSERT(pe->outstanding_read == 1, pe);
 			add_job(next_job, false);
 		}
 		else
 		{
 			TORRENT_PIECE_ASSERT(pe->read_jobs.size() == 0, pe);
-			pe->outstanding_read = 0;
+			if (clear_outstanding)
+			{
+				pe->outstanding_read = 0;
 #if TORRENT_USE_ASSERTS
-			pe->piece_log.push_back(piece_log_t(piece_log_t::clear_outstanding_jobs));
+				pe->piece_log.push_back(piece_log_t(piece_log_t::clear_outstanding_jobs, __LINE__));
 #endif
-			m_disk_cache.maybe_free_piece(pe);
+				m_disk_cache.maybe_free_piece(pe);
+			}
 		}
 	}
 
@@ -1451,9 +1499,6 @@ namespace libtorrent
 		cached_piece_entry* pe = m_disk_cache.find_piece(j);
 		if (pe && pe->hashing_done)
 		{
-#if TORRENT_USE_ASSERTS
-			print_piece_log(pe->piece_log);
-#endif
 			TORRENT_ASSERT(pe->blocks[j->d.io.offset / 16 / 1024].buf != j->buffer.disk_block);
 			TORRENT_ASSERT(pe->blocks[j->d.io.offset / 16 / 1024].buf != nullptr);
 			j->error.ec = error::operation_aborted;
@@ -1613,7 +1658,7 @@ namespace libtorrent
 		}
 
 #if TORRENT_USE_ASSERTS
-		pe->piece_log.push_back(piece_log_t(piece_log_t::set_outstanding_jobs));
+		pe->piece_log.push_back(piece_log_t(piece_log_t::set_outstanding_jobs, __LINE__));
 #endif
 		pe->outstanding_read = 1;
 
@@ -3376,9 +3421,8 @@ namespace libtorrent
 		std::shared_ptr<disk_observer> o
 		, char const* category)
 	{
-		char* ret = m_disk_cache.allocate_buffer(o, category);
-		TORRENT_ASSERT(ret != nullptr);
-		return disk_buffer_holder(*this, ret);
+		return disk_buffer_holder(*this
+			, m_disk_cache.allocate_buffer(o, category));
 	}
 
 	void disk_io_thread::add_completed_job(disk_io_job* j)
