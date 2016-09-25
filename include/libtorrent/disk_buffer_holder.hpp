@@ -51,7 +51,7 @@ namespace libtorrent
 		virtual void reclaim_block(block_cache_reference ref) = 0;
 		virtual disk_buffer_holder allocate_disk_buffer(char const* category) = 0;
 		virtual disk_buffer_holder allocate_disk_buffer(
-			, std::shared_ptr<disk_observer> o, char const* category) = 0;
+			std::shared_ptr<disk_observer> o, char const* category) = 0;
 	protected:
 		~buffer_allocator_interface() {}
 	};
