@@ -2557,11 +2557,11 @@ namespace libtorrent
 		if (!m_enc_handler.is_recv_plaintext())
 		{
 			int const consumed = m_enc_handler.decrypt(m_recv_buffer, bytes_transferred);
-	#ifndef TORRENT_DISABLE_LOGGING
+#ifndef TORRENT_DISABLE_LOGGING
 			if (consumed + bytes_transferred > 0)
 				peer_log(peer_log_alert::incoming_message, "ENCRYPTION"
 					, "decrypted block s = %d", int(consumed + bytes_transferred));
-	#endif
+#endif
 			if (bytes_transferred == SIZE_MAX)
 			{
 				disconnect(errors::parse_failed, op_encryption);
@@ -2577,16 +2577,16 @@ namespace libtorrent
 				return;
 			}
 
-			int sub_transferred = 0;
 			int pos = m_recv_buffer.pos();
 			int limit = m_recv_buffer.packet_size() > pos
 				? m_recv_buffer.packet_size() - pos : m_recv_buffer.packet_size();
+			int sub_transferred = std::min(int(bytes_transferred), limit);
 			do
 			{
-	#if TORRENT_USE_ASSERTS
+#if TORRENT_USE_ASSERTS
 				std::int64_t const cur_payload_dl = m_statistics.last_payload_downloaded();
 				std::int64_t const cur_protocol_dl = m_statistics.last_protocol_downloaded();
-	#endif
+#endif
 				on_receive_impl(sub_transferred);
 				if (m_channel_state[download_channel] & peer_info::bw_disk)
 				{
@@ -2602,13 +2602,13 @@ namespace libtorrent
 				bytes_transferred -= sub_transferred;
 				TORRENT_ASSERT(sub_transferred >= 0);
 
-	#if TORRENT_USE_ASSERTS
+#if TORRENT_USE_ASSERTS
 				TORRENT_ASSERT(m_statistics.last_payload_downloaded() - cur_payload_dl >= 0);
 				TORRENT_ASSERT(m_statistics.last_protocol_downloaded() - cur_protocol_dl >= 0);
 				std::int64_t stats_diff = m_statistics.last_payload_downloaded() - cur_payload_dl +
 					m_statistics.last_protocol_downloaded() - cur_protocol_dl;
 				TORRENT_ASSERT(stats_diff == int(sub_transferred));
-	#endif
+#endif
 
 				if (m_disconnecting) return;
 

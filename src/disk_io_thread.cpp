@@ -1237,7 +1237,7 @@ namespace libtorrent
 			if (ret == need_disk_buffer)
 			{
 				l.lock();
-				cached_piece_entry* pe = m_disk_cache.find_piece(j);
+				pe = m_disk_cache.find_piece(j);
 				if (pe == nullptr)
 				{
 					pe = m_disk_cache.allocate_piece(j, cached_piece_entry::read_lru1);
