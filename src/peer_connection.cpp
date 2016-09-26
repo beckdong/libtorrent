@@ -5929,7 +5929,6 @@ namespace libtorrent
 				// to copy it into
 				// we cannot reset the receive buffer now, we have to wait until
 				// the disk thread tells us there's more space
-//				m_recv_buffer.put_back(sub_transferred);
 				return;
 			}
 

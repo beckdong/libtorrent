@@ -76,8 +76,6 @@ struct TORRENT_EXTRA_EXPORT receive_buffer
 	// cursor
 	int advance_pos(int bytes);
 
-	void put_back(int bytes);
-
 	// has the read cursor reached the end cursor?
 	bool pos_at_end() { return m_recv_pos == m_recv_end; }
 
